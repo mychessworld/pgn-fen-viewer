@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pgnInput = document.getElementById('pgn-input');
     const inputLabel = document.querySelector('label[for="pgn-input"]');
     const loadBtn = document.getElementById('load-btn');
+    const gifBtn = document.getElementById('gif-btn');
     const resetBtn = document.getElementById('reset-btn');
     const viewerContainer = document.getElementById('chess-viewer');
     const viewerStatus = document.getElementById('viewer-status');
@@ -336,6 +337,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadBtn.addEventListener('click', () => {
         withoutScrollJump(() => initViewer(pgnInput.value));
+    });
+
+    gifBtn.addEventListener('click', async () => {
+        withoutScrollJump(async () => {
+            gifBtn.disabled = true;
+            setStatus('Создание GIF…');
+            try {
+                const { exportPgnToGif } = await import('/js/gif-export.js');
+                const { frames, filename } = await exportPgnToGif(pgnInput.value);
+                setStatus(`GIF сохранён (${frames} кадр${frames === 1 ? '' : frames < 5 ? 'а' : 'ов'}): ${filename}`);
+            } catch (error) {
+                setStatus(`Ошибка GIF: ${error.message}`, true);
+            } finally {
+                gifBtn.disabled = false;
+            }
+        });
     });
 
     resetBtn.addEventListener('click', () => {
