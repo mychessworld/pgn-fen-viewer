@@ -1,0 +1,56 @@
+---
+const title = 'PGN Chess Viewer — Демо';
+---
+
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content={Astro.generator} />
+        <title>{title}</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="stylesheet" href="/css/styles.css" />
+    </head>
+    <body>
+        <header class="header">
+            <div class="container header-inner">
+                <h1>♟️ PGN/FEN Chess Viewer</h1>
+            </div>
+        </header>
+
+        <main class="container">
+            <section id="demo" class="demo-section">
+                <div class="demo-controls">
+                    <div class="input-mode">
+                        <button class="mode-btn active" data-mode="pgn">PGN</button>
+                    </div>
+
+                    <label for="pgn-input">Вставьте PGN/FEN:</label>
+                    <textarea id="pgn-input" rows="6" placeholder="1. e4 e5 2. Nf3 Nc6...">[Event "Demo"]
+</textarea>
+
+                    <div class="control-buttons">
+                        <button id="load-btn" class="btn primary">▶ Загрузить PGN</button>
+                        <button id="reset-btn" class="btn">↺ Сбросить</button>
+                    </div>
+                </div>
+
+                <div id="chess-viewer" class="viewer-container obsidian-chess-plugin-container"></div>
+                <p id="viewer-status" class="viewer-status" aria-live="polite"></p>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>
+                    • <strong>mychessworld@yahoo.com</strong> •
+                    <span>www.chessberry.ru</span>
+                </p>
+            </div>
+        </footer>
+
+        <script is:inline src="/vendor/pgn-viewer/dist.js"></script>
+        <script is:inline src="/js/demo.js"></script>
+    </body>
+</html>
