@@ -8,6 +8,7 @@ const title = 'PGN Chess Viewer — Демо';
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="generator" content={Astro.generator} />
+        <meta name="color-scheme" content="light dark" />
         <title>{title}</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="stylesheet" href="/css/styles.css" />
@@ -15,25 +16,30 @@ const title = 'PGN Chess Viewer — Демо';
     <body>
         <header class="header">
             <div class="container header-inner">
-                <h1>♟️ PGN/FEN Chess Viewer</h1>
+                <p class="header-eyebrow">Chessberry</p>
+                <h1>PGN / FEN Chess Viewer</h1>
+                <p class="header-lead">Просмотр партий и позиций в браузере</p>
             </div>
         </header>
 
-        <main class="container">
+        <main class="container main-content">
             <section id="demo" class="demo-section">
-                <div class="demo-controls">
-                    <div class="input-mode">
-                        <button class="mode-btn active" data-mode="pgn">PGN</button>
+                <div class="demo-controls panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Ввод данных</h2>
+                        <div class="input-mode" role="group" aria-label="Формат ввода">
+                            <button class="mode-btn active" data-mode="pgn" type="button">PGN</button>
+                        </div>
                     </div>
 
-                    <label for="pgn-input">Вставьте PGN/FEN:</label>
+                    <label class="field-label" for="pgn-input">Вставьте PGN/FEN</label>
                     <textarea id="pgn-input" rows="6" placeholder="1. e4 e5 2. Nf3 Nc6...">[Event "Demo"]
 </textarea>
 
                     <div class="control-buttons">
-                        <button id="load-btn" class="btn primary">▶ Загрузить PGN</button>
-                        <button id="gif-btn" class="btn secondary">⬇ Скачать GIF</button>
-                        <button id="reset-btn" class="btn">↺ Сбросить</button>
+                        <button id="load-btn" class="btn primary" type="button">Загрузить PGN</button>
+                        <button id="gif-btn" class="btn secondary" type="button">Скачать GIF</button>
+                        <button id="reset-btn" class="btn tertiary" type="button">Сбросить</button>
                     </div>
                 </div>
 
@@ -43,10 +49,12 @@ const title = 'PGN Chess Viewer — Демо';
         </main>
 
         <footer class="footer">
-            <div class="container">
-                <p>
-                    • <strong>mychessworld@yahoo.com</strong> •
-                    <span>www.chessberry.ru</span>
+            <div class="container footer-inner">
+                <p class="footer-copy">© Chessberry</p>
+                <p class="footer-links">
+                    <a href="mailto:mychessworld@yahoo.com">mychessworld@yahoo.com</a>
+                    <span class="footer-sep" aria-hidden="true">·</span>
+                    <a href="https://www.chessberry.ru" target="_blank" rel="noopener noreferrer">www.chessberry.ru</a>
                 </p>
             </div>
         </footer>
