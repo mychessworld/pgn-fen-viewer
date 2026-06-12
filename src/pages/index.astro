@@ -38,12 +38,25 @@ const title = 'PGN Chess Viewer — Демо';
 
                     <div class="control-buttons">
                         <button id="load-btn" class="btn primary" type="button">Загрузить PGN</button>
-                        <button id="gif-btn" class="btn secondary" type="button">Скачать GIF</button>
+                        <button id="analysis-btn" class="btn secondary" type="button" aria-pressed="false">Режим анализа</button>
                         <button id="reset-btn" class="btn tertiary" type="button">Сбросить</button>
                     </div>
                 </div>
 
                 <div id="chess-viewer" class="viewer-container obsidian-chess-plugin-container"></div>
+
+                <div id="engine-panel" class="engine-panel hidden" aria-live="polite">
+                    <div class="engine-panel-header">
+                        <span class="engine-panel-title">Stockfish</span>
+                        <span id="engine-depth" class="engine-depth"></span>
+                    </div>
+                    <div class="engine-eval-row">
+                        <span id="engine-eval" class="engine-eval">—</span>
+                        <span id="engine-busy" class="engine-busy"></span>
+                    </div>
+                    <p id="engine-line" class="engine-line">Лучшая линия появится после анализа позиции.</p>
+                </div>
+
                 <p id="viewer-status" class="viewer-status" aria-live="polite"></p>
             </section>
         </main>

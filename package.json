@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "postinstall": "node scripts/copy-stockfish.cjs"
   },
   "dependencies": {
     "astro": "^5.5.0",
     "chess.js": "^1.4.0",
-    "gifenc": "^1.0.3"
+    "stockfish": "^18.0.7"
   }
 }

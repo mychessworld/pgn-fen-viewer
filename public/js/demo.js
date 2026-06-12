@@ -4,10 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const pgnInput = document.getElementById('pgn-input');
     const inputLabel = document.querySelector('label[for="pgn-input"]');
     const loadBtn = document.getElementById('load-btn');
-    const gifBtn = document.getElementById('gif-btn');
+    const analysisBtn = document.getElementById('analysis-btn');
     const resetBtn = document.getElementById('reset-btn');
     const viewerContainer = document.getElementById('chess-viewer');
     const viewerStatus = document.getElementById('viewer-status');
+    const enginePanel = document.getElementById('engine-panel');
+    const engineEvalEl = document.getElementById('engine-eval');
+    const engineLineEl = document.getElementById('engine-line');
+    const engineDepthEl = document.getElementById('engine-depth');
+    const engineBusyEl = document.getElementById('engine-busy');
     const modeBtns = document.querySelectorAll('.mode-btn');
 
     const BOARD_SIZE_MAX = 600;
@@ -16,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let resizeTimer;
     let isFixingVariationOrder = false;
     let variationOrderObserver = null;
+    let isAnalysisMode = false;
+    let analysisBase = null;
+    let analysisSyncTimer;
+    let stockfishEngine = null;
+    let engineAnalyzeTimer;
+    let engineModule = null;
 
     function getBoardSizePx() {
         const container = document.querySelector('.container');
@@ -35,12 +46,200 @@ document.addEventListener('DOMContentLoaded', () => {
         viewerStatus.classList.toggle('success', !isError);
     }
 
+    function stopAnalysisSync() {
+        clearTimeout(analysisSyncTimer);
+        analysisBase = null;
+    }
+
+    function setAnalysisMode(active) {
+        isAnalysisMode = active;
+        analysisBtn.classList.toggle('active', active);
+        analysisBtn.setAttribute('aria-pressed', String(active));
+        viewerContainer.classList.toggle('analysis-active', active);
+        if (!active) {
+            stopEngineAnalysis();
+        }
+    }
+
+    async function ensureEngineModule() {
+        if (!engineModule) {
+            engineModule = await import('/js/stockfish-engine.js');
+        }
+        return engineModule;
+    }
+
+    function resetEnginePanel(message = '') {
+        if (engineEvalEl) {
+            engineEvalEl.textContent = '—';
+        }
+        if (engineLineEl) {
+            engineLineEl.textContent = message || 'Лучшая линия появится после анализа позиции.';
+        }
+        if (engineDepthEl) {
+            engineDepthEl.textContent = '';
+        }
+        if (engineBusyEl) {
+            engineBusyEl.textContent = '';
+        }
+    }
+
+    function updateEnginePanel(result) {
+        if (!engineModule) {
+            return;
+        }
+        if (engineEvalEl) {
+            engineEvalEl.textContent = engineModule.formatEngineScore(result);
+        }
+        if (engineLineEl) {
+            engineLineEl.textContent = result.sanLine || result.pv || '—';
+        }
+        if (engineDepthEl) {
+            engineDepthEl.textContent = result.depth ? `глубина ${result.depth}` : '';
+        }
+        if (engineBusyEl) {
+            engineBusyEl.textContent = '';
+        }
+    }
+
+    async function startEngineAnalysis(base) {
+        if (!isAnalysisMode || !base) {
+            return;
+        }
+
+        enginePanel?.classList.remove('hidden');
+        resetEnginePanel('Загрузка Stockfish…');
+
+        try {
+            const mod = await ensureEngineModule();
+            if (!stockfishEngine) {
+                stockfishEngine = new mod.StockfishEngine();
+                stockfishEngine.onUpdate = (result) => updateEnginePanel(result);
+                stockfishEngine.onAnalysisComplete = () => {
+                    if (engineBusyEl) {
+                        engineBusyEl.textContent = '';
+                    }
+                };
+                await stockfishEngine.init();
+            }
+            resetEnginePanel();
+            scheduleEngineAnalysis(base);
+        } catch (error) {
+            if (engineBusyEl) {
+                engineBusyEl.textContent = '';
+            }
+            if (engineLineEl) {
+                engineLineEl.textContent = `Ошибка движка: ${error.message}`;
+            }
+        }
+    }
+
+    function stopEngineAnalysis() {
+        clearTimeout(engineAnalyzeTimer);
+        engineAnalyzeTimer = null;
+        if (stockfishEngine) {
+            stockfishEngine.terminate();
+            stockfishEngine = null;
+        }
+        enginePanel?.classList.add('hidden');
+        resetEnginePanel();
+    }
+
+    function scheduleEngineAnalysis(base) {
+        clearTimeout(engineAnalyzeTimer);
+        if (!isAnalysisMode || !base || !stockfishEngine?.ready) {
+            return;
+        }
+
+        engineAnalyzeTimer = setTimeout(async () => {
+            try {
+                const mod = engineModule || await ensureEngineModule();
+                const fen = mod.fenFromAnalysisBase(base);
+                if (engineBusyEl) {
+                    engineBusyEl.textContent = 'Анализ…';
+                }
+                stockfishEngine.analyze(fen);
+            } catch (error) {
+                if (engineLineEl) {
+                    engineLineEl.textContent = `Ошибка анализа: ${error.message}`;
+                }
+                if (engineBusyEl) {
+                    engineBusyEl.textContent = '';
+                }
+            }
+        }, 250);
+    }
+
+    function syncPgnToInput(base) {
+        if (!base || typeof base.getPgn !== 'function') {
+            return;
+        }
+        const pgn = base.getPgn().writePgn();
+        if (!pgn || !/\d+\./.test(pgn)) {
+            return;
+        }
+        pgnInput.value = pgn;
+    }
+
+    function schedulePgnSync(base) {
+        clearTimeout(analysisSyncTimer);
+        analysisSyncTimer = setTimeout(() => syncPgnToInput(base), 80);
+    }
+
     function clearViewer() {
+        stopAnalysisSync();
         if (variationOrderObserver) {
             variationOrderObserver.disconnect();
             variationOrderObserver = null;
         }
         viewerContainer.innerHTML = '';
+    }
+
+    function getViewerOptions(pgn, boardSize) {
+        return {
+            pgn,
+            layout: 'top',
+            notation: 'short',
+            showCoords: true,
+            showNotation: true,
+            coordsInner: false,
+            coordsFontSize: '12',
+            boardSize: `${boardSize}px`,
+            resizable: false,
+            theme: 'green',
+            pieceStyle: 'wikipedia',
+            headers: true,
+            showFen: false
+        };
+    }
+
+    function getAnalysisOptions(rawInput, boardSize) {
+        const options = {
+            layout: 'top',
+            notation: 'short',
+            showCoords: true,
+            showNotation: true,
+            coordsInner: false,
+            coordsFontSize: '12',
+            boardSize: `${boardSize}px`,
+            resizable: false,
+            theme: 'green',
+            pieceStyle: 'wikipedia',
+            headers: false,
+            showFen: false
+        };
+
+        const trimmed = (rawInput || '').trim();
+        if (!trimmed) {
+            options.position = 'start';
+            return options;
+        }
+
+        try {
+            options.pgn = buildPayload(trimmed).pgn;
+        } catch {
+            options.position = 'start';
+        }
+        return options;
     }
 
     function stripBom(text) {
@@ -280,7 +479,50 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    function initViewer(rawInput) {
+    function initAnalysisViewer(rawInput) {
+        clearViewer();
+        try {
+            if (!window.PGNV || typeof window.PGNV.pgnBase !== 'function') {
+                throw new Error('Библиотека @mliebelt/pgn-viewer не загрузилась');
+            }
+
+            const boardSize = getBoardSizePx();
+            applyBoardSize(boardSize);
+
+            let base;
+            base = window.PGNV.pgnBase('chess-viewer', {
+                ...getAnalysisOptions(rawInput, boardSize),
+                mode: 'edit',
+                movable: {
+                    free: false,
+                    events: {
+                        after(orig, dest, meta) {
+                            base.onSnapEnd(orig, dest, meta);
+                            schedulePgnSync(base);
+                            scheduleEngineAnalysis(base);
+                        }
+                    }
+                },
+                viewOnly: false
+            });
+
+            base.generateHTML();
+            base.generateMoves();
+            base.generateBoard();
+
+            analysisBase = base;
+
+            viewerContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setStatus('Режим анализа: двигайте фигуры — PGN обновляется в поле ввода.');
+            startEngineAnalysis(analysisBase);
+            return true;
+        } catch (e) {
+            setStatus(`Ошибка анализа: ${e.message}`, true);
+            return false;
+        }
+    }
+
+    function initViewViewer(rawInput) {
         clearViewer();
         try {
             if (!window.PGNV || typeof window.PGNV.pgnView !== 'function') {
@@ -291,19 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const boardSize = getBoardSizePx();
             applyBoardSize(boardSize);
 
-            window.PGNV.pgnView('chess-viewer', {
-                pgn: payload.pgn,
-                layout: 'top',
-                notation: 'short',
-                showCoords: true,
-                showNotation: true,
-                coordsInner: false,
-                coordsFontSize: '12',
-                boardSize: `${boardSize}px`,
-                resizable: false,
-                theme: 'green',
-                pieceStyle: 'wikipedia'
-            });
+            window.PGNV.pgnView('chess-viewer', getViewerOptions(payload.pgn, boardSize));
 
             if (payload.mode === 'pgn') {
                 scheduleVariationOrderFix(viewerContainer);
@@ -321,6 +551,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function initViewer(rawInput) {
+        if (isAnalysisMode) {
+            return initAnalysisViewer(rawInput);
+        }
+        return initViewViewer(rawInput);
+    }
+
+    function toggleAnalysisMode() {
+        if (isAnalysisMode) {
+            setAnalysisMode(false);
+            withoutScrollJump(() => {
+                if (pgnInput.value.trim()) {
+                    initViewViewer(pgnInput.value);
+                    setStatus('Режим просмотра включён.');
+                } else {
+                    clearViewer();
+                    setStatus('Режим просмотра. Загрузите PGN или включите анализ.');
+                }
+            });
+            return;
+        }
+
+        setAnalysisMode(true);
+        pgnInput.value = '';
+        withoutScrollJump(() => initAnalysisViewer(''));
+    }
+
     function setMode(mode) {
         currentMode = mode;
         modeBtns.forEach((btn) => {
@@ -336,30 +593,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadBtn.addEventListener('click', () => {
-        withoutScrollJump(() => initViewer(pgnInput.value));
+        withoutScrollJump(() => {
+            setAnalysisMode(false);
+            initViewViewer(pgnInput.value);
+        });
     });
 
-    gifBtn.addEventListener('click', async () => {
-        withoutScrollJump(async () => {
-            gifBtn.disabled = true;
-            setStatus('Создание GIF…');
-            try {
-                const { exportPgnToGif } = await import('/js/gif-export.js');
-                const { frames, filename } = await exportPgnToGif(pgnInput.value);
-                setStatus(`GIF сохранён (${frames} кадр${frames === 1 ? '' : frames < 5 ? 'а' : 'ов'}): ${filename}`);
-            } catch (error) {
-                setStatus(`Ошибка GIF: ${error.message}`, true);
-            } finally {
-                gifBtn.disabled = false;
-            }
-        });
+    analysisBtn.addEventListener('click', () => {
+        toggleAnalysisMode();
     });
 
     resetBtn.addEventListener('click', () => {
         withoutScrollJump(() => {
+            setAnalysisMode(false);
             pgnInput.value = '';
             clearViewer();
-            setStatus('Поле очищено. Вставьте PGN/FEN и нажмите "Загрузить в вьювер".');
+            setStatus('Поле очищено. Вставьте PGN/FEN и нажмите «Загрузить PGN».');
         });
     });
 
@@ -370,6 +619,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     viewerContainer.addEventListener('click', (event) => {
+        if (isAnalysisMode) {
+            return;
+        }
         if (!event.target.closest('.pgnvjs')) {
             return;
         }
@@ -383,7 +635,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Math.abs(nextSize - currentBoardSize) < 8) {
                 return;
             }
-            if (pgnInput.value.trim()) {
+            if (isAnalysisMode) {
+                initAnalysisViewer(pgnInput.value);
+            } else if (pgnInput.value.trim()) {
                 initViewer(pgnInput.value);
             } else {
                 applyBoardSize(nextSize);

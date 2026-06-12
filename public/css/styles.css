@@ -254,6 +254,17 @@ section { padding: 0; }
     border-color: var(--pds-text-low);
 }
 
+.btn.secondary.active {
+    background: var(--pds-text-primary);
+    color: var(--pds-canvas);
+    border-color: var(--pds-text-primary);
+}
+
+.btn.secondary.active:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
 .btn.tertiary {
     background: transparent;
     color: var(--pds-text-medium);
@@ -321,6 +332,71 @@ section { padding: 0; }
 
 .viewer-status.error {
     color: var(--pds-error);
+}
+
+.engine-panel {
+    width: 100%;
+    max-width: min(calc(var(--chess-board-size, 50vh) + 80px), 100%);
+    margin: 0.85rem auto 0;
+    padding: 1rem 1.15rem;
+    background: var(--pds-surface);
+    border: 1px solid var(--pds-border);
+    border-radius: var(--pds-radius);
+    box-shadow: var(--pds-shadow);
+}
+
+.engine-panel.hidden {
+    display: none;
+}
+
+.engine-panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.engine-panel-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--pds-text-medium);
+}
+
+.engine-depth {
+    font-size: 0.75rem;
+    color: var(--pds-text-low);
+}
+
+.engine-eval-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.engine-eval {
+    font-size: clamp(1.6rem, 2vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--pds-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.engine-busy {
+    font-size: 0.8rem;
+    color: var(--pds-text-medium);
+}
+
+.engine-line {
+    font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--pds-text-high);
+    word-break: break-word;
 }
 
 /* ── Footer ── */
@@ -401,6 +477,13 @@ cg-board {
 .green cg-board {
     background-image: url("/board/150.png") !important;
     background-size: 100% 100% !important;
+}
+
+#chess-viewer.analysis-active .error,
+#chess-viewer.analysis-active .edit,
+#chess-viewer.analysis-active .games,
+#chess-viewer.analysis-active [id^="edit"] {
+    display: none !important;
 }
 
 #chess-viewer {

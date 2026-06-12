@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    image: chessberry:latest
+    container_name: chessberry
+    restart: unless-stopped
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    # Имя сети, к которой подключён Nginx Proxy Manager.
+    # Portainer → Networks → найдите сеть контейнера NPM (часто npm_default или nginx-proxy-manager_default).
+    name: npm_default
